@@ -1,0 +1,594 @@
+    <script type="text/javascript">
+window.onerror = function (text, file, line) {
+    if (document.getElementById('errorBlock') == null) {
+	    console.error(text+' '+file+':'+line);
+        return ;
+    }
+    document.getElementById('errorBlock').innerHTML += text+' '+file+':'+line + '<br />';
+}
+
+// Общие функции
+function formatSize($bytes) {
+    if ($bytes < 1024) {
+        return $bytes+" b";
+    } else if ($bytes < Math.pow(1024, 2)) {
+        return ($bytes / 1024).toFixed(2)+' Kb';
+    } else if ($bytes < Math.pow(1024, 3)) {
+        return ($bytes / Math.pow(1024, 2)).toFixed(2)+' Mb';
+    } else if ($bytes < Math.pow(1024, 4)) {
+        return ($bytes / Math.pow(1024, 3)).toFixed(2)+' Gb';
+    }
+}
+// cook.set('folders', n, 365, '/')
+cook = {
+    //
+	set:function(name, value, expires, path, domain, secure) {
+		expl=new Date();
+        if (expires == undefined) {
+        	expires = 30;
+        }
+		expires=expl.getTime() + (expires*24*60*60*1000);
+		expl.setTime(expires);
+		expires=expl.toGMTString();
+		var curCookie = name + "=" + escape(value) +
+		((expires) ? "; expires=" + expires: "") +
+		((path) ? "; path=" + path : "") +
+		((domain) ? "; domain=" + domain : "") +
+		((secure) ? "; secure" : "")
+		document.cookie = curCookie;
+        return cook.get(name) == value;
+	},
+	get:function(name) {
+		var prefix = name + "=";
+		var cookieStartIndex = document.cookie.indexOf(prefix);
+		if (cookieStartIndex == -1)
+				return false
+		var cookieEndIndex = document.cookie.indexOf(";", cookieStartIndex + prefix.length);
+		if (cookieEndIndex == -1)
+				cookieEndIndex = document.cookie.length;
+		return unescape(document.cookie.substring(cookieStartIndex + prefix.length, cookieEndIndex))
+	}
+}
+// dev переключатель
+function devRefresh()
+{
+    var dev = cook.get('dev')
+    if (typeof(dev) != 'undefined' && dev) {
+        $('#dev').addClass('active')
+    } else {
+        $('#dev').removeClass('active')
+    }
+}
+function devToggle()
+{
+    var dev = cook.get('dev')
+    if (typeof(dev) != 'undefined' && dev) {
+        cook.set('dev', 0, 0, '/');
+    } else {
+        cook.set('dev', 1, 365, '/');
+    }
+    devRefresh()
+}
+
+// Топ меню
+function ns(obj)
+{
+    obj.nextElementSibling.style.display = 'block';
+    return false;
+}
+function openMenu()
+{
+    document.getElementById('qMenu').style.display='block';
+}
+function hideMenu()
+{
+    document.getElementById('qMenu').style.display='none';
+}
+function switchSql(force)
+{
+    if (typeof(force) == 'undefined') {
+    	force = ''
+    }
+    var s = document.getElementById('sql-quick');
+    if (s.style.display == 'block' || force == 'hide') {
+        s.style.display = 'none';
+        document.getElementById('overlay').style.display = 'none'
+    } else {
+        s.style.display = 'block';
+        s.getElementsByTagName('TEXTAREA')[0].focus()
+        document.getElementById('overlay').style.display = 'block'
+    }
+}
+function checkPsevdo(chbx, hidden)
+{
+    hidden.value = chbx.checked ? 1 : '';
+}
+var ctrlKey;
+$(document).ready(function(){
+    $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+        document.getElementById('errorBlock').innerHTML += 'Ajax error '+settings.url + '<br />';
+    });
+    $(document).ajaxStart(function() {
+        $('#loader').show();
+    });
+    $(document).ajaxStop(function() {
+        $('#loader').hide();
+    });
+    /*$('.autofocus').focus(function() {
+        $(this).select()
+    })*/
+    $('.focusselect').focus(function() {
+        $(this).select()
+    })
+    $('.autoselect').each(function() {
+        $(this).select()
+    })
+    $('.nsh').click(function() {
+        $(this).next().toggle();
+        if ($(this).hasClass('ns-hide')) {
+        	$(this).hide()
+        }
+        return false;
+    })
+    $(window).on('keydown', function(event) {
+        ctrlKey = event.ctrlKey;
+        if (ctrlKey) {
+        	$('body').addClass('ctrlKey')
+        }
+        if (event.which == 27) {
+        	switchSql('hide')
+            $('#overlay, #edit-file').hide();
+        }
+    })
+    $(window).on('keyup', function(event) {
+        ctrlKey = event.ctrlKey;
+        if (!ctrlKey) {
+            $('body').removeClass('ctrlKey')
+        }
+    })
+    $('#sql-quick [type=submit]').click(function(e) {
+        $(this).next().show()
+        $('#value-row, #value-row-alt').attr('name', '')
+        var id = $('#value-row').val() ? '#value-row' : '#value-row-alt';
+        $(id).attr('name', this.name != '' ? this.name : this.value)
+        setTimeout(function(x) {
+            x.disabled = true;
+        }, 100, this);
+        setTimeout(function(x) {
+            x.disabled = false;
+        }, 1000, this);
+    })
+});
+function changeAi(ai)
+{
+    var ai = prompt('Введите новое значение AI', ai);
+    if (!ai) {
+        return false;
+    }
+    location = '/<?=EXP?>?action=tables&table=<?=$_GET['table']?>&ai='+ai
+}
+// аяксоквый сабмит формы с алертом результата
+function ajaxSubmit(form)
+{
+    if ($('textarea[name=sql-exec]').val()) {
+        return true;
+    }
+    $.post('', $(form).serialize(), function(data) {
+        if (data != '') {
+            $('#ajaxResults').show().html(data)
+        }
+    });
+    return false;
+}
+// просто аякс запрос по урлу
+// obj элемент который надо спрятать после выполнения
+/*
+- в декоде / сериализации в форме редактирования
+- dropkey в ключах. удаление строки в таблице
+*/
+function jsquery(q, opts)
+{
+    if (opts.table) {
+    	var table = opts.table;
+    } else {
+        if (window.location.search) {
+        	var table = new URLSearchParams(window.location.search).get('table');
+        }
+    }
+    $.ajax({
+        url : '/<?=EXP?>?table='+table,
+        type : 'POST',
+        data : q,
+        success : function(data) {
+            if (data.indexOf('eval:') === 0) {
+                eval(data.substr(5))
+                return ;
+            }
+            if (data != '' && data.indexOf('<') !== 0) {
+                alert(data)
+            }
+            if (typeof(opts.hide) != 'undefined') {
+                $(opts.hide).hide()
+            }
+        }
+    });
+}
+
+// Поиск
+function chooseFolders()
+{
+    var folders = '<?=$_COOKIE['folders']?>';
+    var n = prompt('Список папок для поиска через ,', folders);
+    if (n !== false && n != null) {
+        cook.set('folders', n, 365, '/');
+        document.getElementById('foldersInput').value = n
+    }
+}
+function changeRoot()
+{
+    let folders = '<?=$_COOKIE['folder_root'] ? $_COOKIE['folder_root'] : getcwd()?>';
+    let n = prompt('Выбрать корень поиска', folders);
+    if (n !== false && n != null) {
+        cook.set('folder_root', n, 365, '/')
+    }
+}
+
+// Создание таблицы
+function addNewField()
+{
+    var el = $('#createTable').append($('#firstField').html())
+    $('#createTable').children().last().find('input').val('')
+}
+
+// Страница поиска
+Search = {
+    filterHtmlRows(input) {
+        let include = document.getElementById('filter-search-include').value;
+        let exclude = document.getElementById('filter-search-exclude').value;
+        if (include.length < 3) {
+            include = '';
+        }
+        if (exclude.length < 3) {
+            exclude = '';
+        }
+        if (!include && !exclude) {
+            $('.fl, [data-ext').prop('hidden', false)
+            return ;
+        }
+        $('.fl').each(function() {
+            if (include && !this.innerHTML.match(new RegExp('('+include+')', 'gi'))) {
+                this.hidden = true
+            }
+            if (exclude && this.innerHTML.match(new RegExp('('+exclude+')', 'gi'))) {
+                this.hidden = true
+            }
+        })
+        $('[data-ext]').each(function() {
+            if (!$(this).find('.fl:not([hidden])').length) {
+                this.hidden = true;
+            } else {
+                this.hidden = false;
+            }
+        })
+    },
+    init() {
+        // Заполнить селект выбора расширений
+        let exts = []
+        $('[data-ext]').each(function() {
+            let ext = this.dataset.ext;
+            if (ext && exts.indexOf(ext) < 0) {
+                exts.push(ext)
+                $('select[name="exts"]').append('<option>'+ext+'</option>')
+            }
+        })
+        $('select[name="exts"]').change(function() {
+            let ext = $(this).val()
+            if (ext) {
+                $('[data-ext]').hide()
+                $('[data-ext="'+ext+'"]').show()
+            } else {
+                $('[data-ext').show()
+            }
+        })
+    }
+}
+
+// Размеры папок
+class SizeFolders {
+
+    constructor(root) {
+        this.root = root
+        let max = 20;
+        this.formatTotalSize()
+        $('.calcSize').each(function(index, obj) {
+            if (max > 0) {
+                var folder = $(obj).addClass('calced').attr('data-folder');
+                this.calcSize(folder)
+            }
+            max --;
+        }.bind(this))
+    }
+
+    nextCalc() {
+        let el = $('.calcSize:not(.calced)').first();
+        if (el.length) {
+            let folder = el.attr('data-folder');
+            el.addClass('calced');
+            this.calcSize(folder)
+        }
+    }
+
+    formatTotalSize(add)
+    {
+        let total = document.getElementById('total')
+        if (typeof(add) != 'undefined') {
+            //console.log(`${Number(total.title)} + ${add}`)
+            total.title = add + Number(total.title)
+        }
+        total.innerHTML = formatSize(total.title);
+    }
+
+    colorSize(size='#ccc') {
+        if (size > 1024*1024*10) {
+            var color = 'red';
+        } else if (size > 1024*1024*1) {
+            var color = 'blue';
+        }
+        return color;
+    }
+
+    calcSize(folder)
+    {
+        $.get('/<?=EXP?>?action=sizeFolders&root='+this.root+'&folder='+folder, function(data) {
+            this.nextCalc()
+            let span = $('span[data-folder="'+folder+'"]');
+            if (!data.startsWith('{')) {
+                var r = 2 + Number((Math.random() * 8).toFixed());
+                span.html('error, reload '+r+' sec')
+                setTimeout(this.calcSize, r * 1000, folder);
+                return ;
+            }
+            data = JSON.parse(data);
+            let color = this.colorSize(data.size);
+            this.formatTotalSize(data.size)
+            span.html(formatSize(data.size)).css('color', color).attr('data-size', data.size)
+            span.parent().after('<td style="text-align: right">'+data.count+'</td>')
+        }.bind(this));
+    }
+
+    bigFolders()
+    {
+        let files = [];
+        let sizeLimit = parseInt($('#sizeLimit').val() * 1024 * 1024)
+        $('[data-size]').each(function() {
+            let size = this.dataset.size;
+            if (size > sizeLimit) {
+                files.push($.trim($(this).closest('tr').find('td').first().text()))
+            }
+        })
+        $('#bigFolders').val(files.join(','));
+    }
+}
+
+// Страница просмотр данных
+class TableData {
+    constructor() {
+        $('#filter-form .act').click(function() {
+            $('#filter-form').attr('action', this.href).submit()
+        })
+        $('.optionstable').delegate('td', 'click', function() {
+            $(this).css('white-space', 'normal')
+        })
+        $('.optionstable').delegate('[data-delete]', 'click', function() {
+            if (document.confirmed || confirm('Подтвердите удаление')) {
+                jsquery('tmode=delete&where='+this.dataset.delete, {hide: this.parentNode.parentNode});
+                document.confirmed = 1
+            };
+            return false;
+        })
+        if ($('[name="where"]').val()) {
+            this.openWhere();
+        }
+        if ($('#filter_id_id').val()) {
+            this.openId();
+        }
+        $('#whereField').on('focus', this.openWhere)
+        $('#filter_id_id').on('focus', this.openId)
+        console.log('init');
+    }
+    openWhere() {
+        $('#whereField').addClass('wideBlock')
+        $('#whereField').parent().css('display', 'block').show()
+    }
+    openId() {
+        $('#filter_id_id').css('width', 100)
+    }
+}
+
+// Страница Экспорта
+class Export {
+    constructor() {
+        $('[name="action"]').change(function() {
+            $('.export-col, .import-col').addClass('visually-hidden')
+            $('.'+$(this).val()+'-col').removeClass('visually-hidden')
+        })
+        $('#execButton').click(this.startLoading)
+    }
+    log(t)
+    {
+        var now = new Date();
+        $('#exportLogInfo').prepend(`<div><span style="color:#aaa">${now.toLocaleTimeString()}</span> ${t}</div>`)
+    }
+    testStepByStep(table, offset)
+    {
+        var q = $('#loadingForm').serialize();
+        q += '&steps-export=1';
+        if (typeof(table) != 'undefined') {
+            q += '&table='+table
+        }
+        if (typeof(offset) != 'undefined') {
+            q += '&offset='+offset
+        }
+
+        $.post('', q, function(data) {
+            data = data.split(');');
+            for (let s of data) {
+                if (s.startsWith('<')) {
+                    Export.log('<div style="color:red">'+s+'</div>')
+                } else if (s != '') {
+                    e = s+');'; // т.к. сверху split );
+                    eval(e);
+                    // console.log(`eval(${e})`)
+                }
+            }
+            return false;
+        });
+    }
+    startLoading()
+    {
+        let btn = document.getElementById('execButton')
+        if ($('select[name="ex_type"]').val() == 'steps') {
+            this.testStepByStep();
+            return ;
+        }
+
+        $('#loggerBlock').show()
+        $('#resultsError, #results').hide()
+
+        btn.disabled = true;
+
+        var q = $('#loadingForm').serialize();
+        if (q == '') {
+            alert('Пустой запрос из формы');
+            return ;
+        }
+
+        $.post('', q + '&ajax=1', (data) => {
+            $('#resultSuccess').show().html(`<h2>Запрос выполнен!</h2>`)
+            if (data.startsWith('<!>')) {
+                eval(data.substr(3));
+            } else {
+                if (data.length < 500 && data.match(/on line/)) {
+                    $('#resultsError').show().html(data)
+                } else {
+                    $('#results').show().html(data)
+                }
+            }
+            setTimeout(() => {
+                clearInterval(this.intervalLoading);
+                btn.disabled = false;
+                $('#logEvent').html('disabled')
+            }, 3000);
+            return false;
+        });
+
+        this.stopUpdate = false;
+        this.intervalLoading = setInterval(() => {
+            if (this.stopUpdate) {
+                $('#logEvent').html('stopUpdate')
+                return ;
+            }
+            if (document.getElementById('logger') == null) {
+                clearInterval(this.intervalLoading);
+                $('#logEvent').html('cleared')
+                return ;
+            }
+            document.getElementById('logger').src = '/<?=LOG_FILE?>?' + Math.random();
+        }, 3000);
+    }
+}
+// Нижние функции аплоада - все для экспорта
+// uploadFile({file: '#fileField', show: '#fileFieldLoader', disable: '#execButton', callback: uploadFileAfter})
+function uploadFile(opts)
+{
+    if (typeof(opts.disable) != 'undefined') {
+        $(opts.disable).attr('disabled', true)
+    }
+    if ($(opts.file)[0].size == 0) {
+        alert('Файл '+$(opts.file)[0].name+' пустой');
+    }
+    let formData = new FormData();
+    formData.append($(opts.file)[0].name, $(opts.file)[0].files[0]);
+    if (typeof(opts.show) != 'undefined') {
+        $(opts.show).show()
+    }
+    let query = '?';
+    if (typeof(opts.deleteExist) != 'undefined' && opts.deleteExist) {
+        query += '&deleteExist=1'
+    }
+    if (typeof(opts.filename) != 'undefined') {
+        query += '&filename='+opts.filename
+    }
+    $.ajax({
+        url : '/<?=EXP?>'+query,
+        type : 'POST',
+        data : formData,
+        processData: false,
+        contentType: false,
+        success : function(data) {
+            $(opts.file).val('')
+            if (typeof(opts.disable) != 'undefined') {
+                $(opts.disable).attr('disabled', false)
+            }
+            if (data) {
+                if (data.indexOf('{') === 0) {
+                    data = JSON.parse(data)
+                }
+            }
+            if (typeof(opts.callback) != 'undefined') {
+                opts.callback(data)
+            }
+        }
+    });
+    return false;
+}
+function importFileUpload()
+{
+    uploadFile({file: '#fileField', deleteExist: true, filename: 'temp', show: '#fileFieldLoader', disable: '#execButton', callback: uploadFileAfter})
+}
+function uploadFileAfter(data)
+{
+    if (data.file) {
+        $('#fileFieldLoader').html('файл загружен как "'+data.file+'" <a href="#" onclick="uploadFileRemove(); return false;">удалить</a>').css('color', 'green');
+    } else if (data.error) {
+        $('#fileFieldLoader').html('<span style="color:red">'+data.error+'</span>')
+    } else {
+        $('#fileFieldLoader').html('<span style="color:red">'+data+'</span>')
+    }
+}
+function uploadFileRemove()
+{
+    $.post('', 'uploadfileremove=1', function(data) {
+        $('#fileFieldLoader').html('')
+    });
+}
+
+$(document).ready(function(){
+    devRefresh()
+    // Страница поиска
+    if ($('#deleteInfo').length) {
+        Search.init()
+    }
+    // Форма редактирования строки - processEdit
+    if ($('#edit-fields-form').length) {
+        $('input[type=text]').keyup(function() {
+            var nulled = $('input[name="nulled['+$(this).attr('name')+']"]');
+            $(nulled).prop('checked', this.value.length == 0 ? 'checked' : '')
+        })
+        // для обработки ссылок json_encode decode serialize на textarea инпутах в tmode=edit
+        $('[data-fieldact]').click(function() {
+            jsquery(this.innerHTML+'='+encodeURIComponent($(this).parent().prev().val()), {hide: this});
+            return false;
+        })
+    }
+    if ($('#size-folders').length) {
+        SizeFolders = new SizeFolders($('#size-folders').data('root'));
+    }
+    if ($('#whereField').length) {
+        new TableData()
+    }
+    if ($('#exportLogInfo').length) {
+        new Export
+    }
+})
+</script>

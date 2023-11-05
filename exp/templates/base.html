@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ getAppTitle }}</title>
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+      integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    {% include "layout_scripts.html" %}
+    {% include "layout_styles.html" %}
+</head>
+
+<body>
+    <div id="loader"></div>
+    <div id="overlay"></div>
+
+
+    {{ printQMenu|safe }}
+
+    <form method="post" id="sql-quick" action="{{ EXP }}?action=sql-quick" onsubmit="return ajaxSubmit(this)">
+        <input type="hidden" name="sql-quick" value="1">
+        <input type="submit" name="sql-exec" value="Выполнить SQL" />
+        <input onclick="switchSql()" type="button" value="Отмена">
+        <!-- <input type="submit" name="quick-json" value="JSON decode" />
+        <input type="submit" name="quick-unserialize" value="Unserialize" />
+        <input type="submit" name="php-exec" value="PHP exec" /> -->
+        <textarea id="value-row" placeholder="Sql или другое"></textarea>
+
+        <div style="margin-top:5px;">
+            <input type="submit" value="md5" />
+            <input type="submit" name="tms" value="timestamp / date" />
+            <input type="submit" name="loadurl" value="url load" />
+            <input type="submit" name="http" value="url status" />
+            <span style="display:none;">
+                <input type="text" name="http_login" style="width:100px;" placeholder="" />
+                <input type="text" name="http_pass" style="width:100px;" placeholder="" />
+            </span>
+            <input type="submit" name="check-email" value="email (test)" />
+            <input type="submit" value="translit" />
+            <input type="submit" value="punicode" />
+            <input type="submit" name="passw" value="password" onclick="$(this).next().show()" />
+            <span style="display:none">
+                <input type="text" style="width:30px;" name="length" value="10">
+                <label><input type="checkbox" checked name="caps" value="1"> caps</label>
+                <label><input type="text" name="password-symbols" value="{{ password_symbols }}" style="width: 200px"> </label>
+            </span>
+            <input type="text" id="value-row-alt" name="exp-value" style="width:300px; margin-left:10px;" placeholder="Альтернативное поле ввода" />
+        </div>
+        {{ sessionSqls|safe }}
+        <div style="margin-top:5px; display:none; max-height:300px; overflow:auto" id="ajaxResults"></div>
+    </form>
+
+
+<div class="container-fluid">
+    <div class="row">
+        <div id="hh" class="col-auto">
+            <a id="header" onmouseover="openMenu()" onmouseout="hideMenu();" href="{{ PHP_SELF }}">Site</a>
+            <a href="#" style="color:green" onclick="switchSql(); return false;">manager {{ MS_APP_VERSION }}</a>
+        </div>
+        <div class="col-auto">
+
+            <div style="font-size:12px; color:#666">
+                <span style="font-size:12px;">{% if database %} База <b>{{ database }}</b> <a href='?action=logoutdb'>другая</a> {% endif %}
+                <a href="?action=logout">выйти</a> &nbsp;&nbsp;</span>
+{#                <span style="color:#ccc">max_time</span> <b>max_execution_time</b>#}
+{#                <span style="color:#ccc">limit</span> <b>memory_limit</b>#}
+{#                <span style="color:#ccc">disk</span> <b title="Свободно <?=formatSize(disk_free_space('.'))?> из#}
+{#                    <?=formatSize(disk_total_space('.'))?>"><?php echo formatSize(disk_free_space('.')) ?></b>#}
+                <span title="{{ getTmpInfo }}"><span style="color:#ccc">tmp</span> <b><?=TMP_DIR?></b></span>
+                <a href="?phpinfo" style="margin-left:10px;">phpinfo</a>
+               <?php $a = explode('.', phpversion()); ?>
+                <a href="#" onclick="$(this).next().show(); this.remove(); return false;">php <?=$a[0].'.'.$a[1]?> mysql</a><span class="phpinfo">
+                <span style="color:#ccc">php </span><?php echo phpversion()?>
+                <span style="color:#ccc">mysql </span><?php echo getServerVersion()?>
+                <?php
+                if (isset($server)) {
+                    echo "  - connected to $server as $user. ";
+                }
+                echo ' ip:'.$_SERVER['REMOTE_ADDR'];
+                echo ' server:'.$_SERVER['SERVER_ADDR'];
+                ?>
+                </span>
+                <?php
+                if ($_SERVER['HTTP_HOST'] != 'komu.info') {
+                    $add = '';
+                    if (time() - filemtime(__FILE__) > 86400*30) {
+                    	$add = ' style="color:red" title="Дата exp '.date('Y-m-d H:i:s', filemtime(__FILE__)).'"';
+                    }
+                	echo ' <a href="?update"'.$add.'>upd</a> ';
+                }
+                ?>
+                <a href="#" id="dev" onclick="devToggle(); return false;">dev</a>
+                &nbsp;
+            </div>
+
+            <div class="top_line">
+                <?php if ($mysqli) { ?>
+                <a href="<?=$_SERVER['PHP_SELF']?>">Экспорт</a>
+                <a href="?action=tables">Таблицы</a>
+                <?php } else { ?>
+                <a href="?action=login">Вход в базу</a>
+                <?php } ?>
+                <a href="?action=zip">Архив</a>
+                <a href="?action=upload">Upload</a>
+                <a href="?action=utils">Utils</a>
+                <?php $pager->printMenus(); ?>
+
+                <br />
+
+                <!--
+                search form
+                -->
+            </div>
+
+            <form method="post" class="srch top" action="/<?=EXP?>?action=search">
+                <input onfocus="this.select(); this.nextSibling.style.display='inline'" autocomplete="off" type="text" name="search" placeholder="Поиск" class="q"
+                    onkeydown="if (event.which == 13) return false;" style="width:200px"
+                    value="<?=htmlspecialchars(trim($_POST['search']))?>" /><span style="<?=$_POST['search']?'':' display:none;'?>">
+                <?php if ($mysqli) { ?>
+                <input type="submit" value="Найти" />
+                <input type="submit" name="fieldSearch" value="Поля" /> <?php } ?>
+                <input type="submit" name="fileSearch" value="Файлы" />
+                <?php
+                $folders = Search::getFolders();
+                ?>
+                <div style="margin-top:5px;">
+                <textarea type="text" name="folders" id="foldersInput" placeholder="По папкам"  /><?=implode(',', $folders)?></textarea>
+                <label onclick="$(this).prev().val('*'); $('[name=maxFiles]').val(1000000);  $('[name=depth]').val(20); $('input[name=html-only]').attr('checked', false); $('input[name=no-case]').attr('checked', true)"><input type="checkbox" name="folders-all" <?=$_POST['folders-all']?'checked':''?> value=""> все</label>
+                <a href="#" style="color:<?=$_COOKIE['folders'] ? ' black' : '#aaa'; ?>;" title="<?=$_COOKIE['folders'] ? $_COOKIE['folders'] : 'Не выбрано'?>" onclick="chooseFolders(); return false;">изм</a>
+                <a href="#" onclick="cook.set('folders', '', 0, '/'); location=location; return false;">сброс</a>
+                <?php
+                $root = $_COOKIE['folder_root'] ? $_COOKIE['folder_root'] : getcwd();
+                ?>
+                <a href="#" onclick="changeRoot(); return false;" title="Выбрать корень поиска. Сейчас <?=$root?>">root</a><span style="color:#ccc">=<?=basename($root)?></span>
+                Предел <input type="text" name="maxFiles" value="<?=POST('maxFiles', 50000)?>" style="width:50px;" />
+
+                </div>
+                <div style="margin-top:5px;">
+                сниппет <input type="text" name="snipsize" value="<?=POST('snipsize', 40)?>" style="width:30px;" />
+                глубина <input type="text" name="depth" value="<?=POST('depth', 20)?>" style="width:30px;" />
+                <label><input type="checkbox" name="regexp" <?=$_POST['regexp']?'checked':''?> value="1"> regexp</label>
+                <label><input type="checkbox" name="no-case" <?=$_POST['no-case']?'checked':''?> value="1"> не учитывать регистр</label>
+                <label title="<?=implode(',', Search::$onlyExtensionList)?>"><input type="checkbox" name="html-only" <?=$_POST && !$_POST['html-only']?'':'checked'?> value="1"> только txt</label>
+                </div>
+                <div style="margin-top:5px;">
+                <label><input type="checkbox" <?=$_POST['find_changed']?'checked':''?> name="find_changed" onclick="$('input[name=html-only]').attr('checked', false)" value="1">
+                поиск измененных с</label> <input type="text" name="find_date" value="<?=$_POST['find_date'] ? $_POST['find_date'] : date('Y-m-d 00:00:00')?>" />
+                <label><input type="checkbox" name="changed_archive" value="1"> создать архив</label>
+                </div>
+                <div style="margin-top:5px;">
+                <label><input type="checkbox" name="search_log" checked value="1"> вести лог в <a href="<?=LOG_FILE?>"><?=LOG_FILE?></a></label>
+                </div>
+                </span>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+<div class="container-fluid">
+
+    <div id="errorBlock" class="alert alert-danger mt-1" style="max-height: 200px; overflow: auto; <?=$pager->errors ? '' : 'display:none'?>">
+    <?php
+    if ($pager->errors) {
+        foreach ($pager->errors as $k => $v) {
+            echo '<div>'.$v.'</div>';
+        }
+    }
+    ?>
+    </div>
+
+    <div id="successBlock" class="alert alert-success mt-1" style="max-height: 200px; overflow: auto; <?=$pager->messages ? '' : 'display:none'?>">
+        <?php
+        foreach ($pager->messages as $k => $v) {
+            list($msg, $error, $sql) = $v;
+            echo $msg;
+            if ($error) {
+                echo "<br /><span style='color:red; font-size:10px;'>$error</span>";
+            }
+            if ($sql) {
+                echo '<pre>'.$sql.'</pre>';
+            }
+            echo '<hr>';
+        }
+        ?>
+    </div>
+
+
+	<?php
+    echo $pageContent;
+    // Поиск по базе и файлам section
+    if (($_POST['search'] || $_POST['find_changed']) && !$_GET['tmode']) {
+        Search::process();
+    }
+    ?>
+</div>
+

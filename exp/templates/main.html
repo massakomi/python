@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+
+{{ x }}
+
+<form method="POST">
+    <input type="text" name="search" value="Test Search">
+    <input type="checkbox" name="fileSearch" value="1" checked> fileSearch
+    <input type="submit" value="Поиск">
+</form>
+
+{{ content|safe }}
+
+
+
+{% if page == 'utils' %}
+    <form method="POST">
+        <input type="text" name="content">
+        <input type="checkbox" name="extract-links" value="1"> extract-links
+        <input type="checkbox" name="generate" value="1"> extract-links
+        <input type="submit" value="Отправить">
+    </form>
+{% endif %}
+
+
+<form method="POST">
+    <textarea name="phpcode" style="width: 100%; height: 300px" placeholder="Конвертация PHP code">{{ phpcode }}</textarea>
+    <input type="submit" value="Конвертировать">
+</form>
+
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Структура таблицы{% endblock %}
+
+{% block content %}
+    {{ table_title|safe }}
+
+    <h2>Данные</h2>
+    {{ table_data|safe }}
+
+    <h2>Структура</h2>
+    <table>
+        <tr>
+            {% for field in columns %}
+            <td>{{ field }}</td>
+            {% endfor %}
+        </tr>
+        {% for v in data %}
+        <tr>
+            {% for field in columns %}
+                <td>{{ v|get_item:field }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
+

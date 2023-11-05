@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Список таблиц{% endblock %}
+
+{% block content %}
+    <table>
+        <tr><td>Таблица</td></tr>
+        {% for table in tables %}
+        <tr>
+            <td><a href="/table_struct/?table={{ table }}">{{ table }}</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
+

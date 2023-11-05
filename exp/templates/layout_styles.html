@@ -1,0 +1,149 @@
+<style>
+body {font-family:Arial}
+a, a:visited {text-decoration:none}
+/*div.title {background-color:#eee; padding:5px; margin-top:20px;}
+div.title:first-child {margin-top:0px;}*/
+#hh {font-size:26px; color:#6D8FB3; white-space:nowrap; }
+#qMenu {position:absolute; background-color:white; font-size:11px; line-height:125%; border:3px dashed black; padding:3px;
+    top:25px; left:9px; display:none; background-color:azure; max-height: 600px; overflow-y: auto; overflow-x: hidden; z-index:1;}
+#qMenu a, .tblMenu a {display:block;}
+#qMenu a:hover, .tblMenu a:hover {background-color:yellow;}
+#qMenu a.active {font-weight:bold; background-color:#66CCFF;}
+.nsh:not(.ns-opened) + * {display:none;}
+.msg {border:1px solid blue; padding:10px; display:inline-block; margin:10px 0; max-height:100px; overflow:auto; font-size: 12px;}
+.myform input[type=text], .myform input[type=number], .myform textarea {border:1px solid #ccc}
+
+.tblMenu {background-color:#eee; height:650px; overflow:auto; font-size:11px}
+#sql-quick, #edit-file {position:absolute; top:50px; left:0; right:0; background-color:white; display:none; padding: 10px;
+    border: 1px solid #ccc; margin: 5px; z-index:4; font-size:12px;}
+#sql-quick textarea, #edit-file textarea {width:99%; height:200px; padding:5px; font-family:Arial; font-size:12px; display:block; margin-top:10px;}
+
+.col-2 {width:50%; display:inline-block; float:left;}
+.row:after {clear:both; display: table; content: " ";}
+
+H2 {margin:10px 0; font-size:20px;}
+table.optionstable {empty-cells:show; border-collapse:collapse; -margin:10px;}
+table.optionstable th {background-color: #eee}
+table.optionstable th, table.optionstable td {border:1px solid #E0E0E0; padding: 3px; vertical-align: top;font-size:13px;}
+table.optionstable a {text-decoration:none;}
+table.optionstable a:hover {text-decoration:underline;}
+table.right td { text-align:right;}
+
+/*.tmenu {font-size:11px;}
+.tmenu a, .tmenu b {color:#aaa; margin-right:5px;}*/
+#overlay {
+    z-index: 3;
+    position: fixed;
+    background-color: #000;
+    opacity: 0.8;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    cursor: pointer;
+    display: none;
+}
+.focusselect {border:1px solid #eee}
+.mini {font-size:12px; color:#aaa}
+#loader {
+    background: white url('http://komu.info/images/upload_inv_mono.gif') center center no-repeat;
+    width: 64px;
+    height: 16px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 10px;
+    border: 1px solid #eee;
+    display:none;
+}
+.phpinfo {display: none;position: absolute;background-color: white;z-index: 20;border: 1px solid rgb(204, 204, 204); padding: 5px;left: 5px;top: 5px;}
+#dev.active {color:green; font-weight:bold}
+
+/* Форма поиска */
+.srch {font-size:12px;}
+.srch input[type=text]:not(.q) {padding: 0px 2px;}
+.srch input[type=checkbox] {vertical-align: -2px;}
+.srch.top { background-color: white; padding: 5px; border: 1px solid #eee; top: 0px;}
+.fl {margin-left:20px; font-size:12px; color:#aaa}
+@media (min-width: 576px) {
+    .srch.top {position:absolute; right:0; margin-left:10px; z-index:1;}
+}
+@media (max-width: 575px) {
+    .srch.top {margin:10px 0}
+}
+textarea[name="folders"] {height: 23px; vertical-align: middle;width: 200px; }
+textarea[name="folders"]:focus {display: block; width: calc(100% - 10px); height: 200px; margin-bottom: 5px; outline: none;}
+
+/* Постраничная */
+div.pages a {background-color:#FFFFCC; border:1px solid #ccc; padding:2px 5px; text-decoration:none;}
+div.pages {line-height:200%; margin-bottom:5px; display:inline-block; font-size:12px;}
+
+/* Просмотр данных */
+#filter-form {margin-bottom:5px; font-size:12px; display:block;}
+#filter-form select {padding:2px;}
+#filter-form .wideBlock {width:700px;}
+table.data a {font-size:12px;}
+table.data td.s {background-color:#F8F8F8;}
+table.data .space {background-color:red; width:5px; display:inline-block;}
+table.data.shortheaders tr:not(.normal) td {white-space: nowrap; max-width: 125px; overflow: hidden;}
+
+/* Размеры папок */
+.cell {min-width:250px; display: flex;}
+.cell a {width:100px; white-space: nowrap;}
+.cell span {width:100px; text-align:right;}
+
+/* Архивирование */
+form.archive {line-height:160%;}
+form.archive input[type=text] {width:300px;}
+form.archive div.flx {margin-bottom:5px; display:flex; max-width:1000px;}
+form.archive div.flx label {width:400px;}
+form.archive div.flx input {width:100%;}
+div.selects {max-height:300px; overflow:auto; display:inline-block; min-width:200px;}
+div.selects ul {list-style:none; margin:0px; padding:0px;}
+div.selects ul ul {display:none; padding-left:10px;}
+div.selects ul .dir > label {font-weight:bold;}
+div.selects ul span {margin-left:10px; color:#aaa; cursor: pointer; font-weight:normal;}
+
+/* Аплоад файлов */
+.fileUpload {padding:20px; border:1px solid #aaa}
+.fileUpload.dragover {border: 2px solid red;}
+.fileUpload.drop {border: 1px solid green;}
+body.ctrlKey .fileUpload {border:5px dotted red}
+.folders-simple {max-height:400px; overflow:auto; }
+.file-hover a:hover, .hv:hover {color:red; cursor: pointer;}
+.file-hover .folder a {color:green;}
+.file-hover .folder a:hover {color:red}
+.fileUpload .file {font-size:12px;}
+.hv span {display:none; margin-left:5px; font-size:12px; color:red}
+.hv:hover span {display:inline;}
+.hv span a {color:red}
+.link.active {font-weight:bold;}
+.fileUpload.innerList {overflow:auto}
+#edit-file textarea {resize: vertical; font-family: Anonymous Pro; font-size:13px; margin-top:10px; margin-bottom:0px; height:500px;}
+
+/* Таблица файлов */
+.folders-table td, .folders-table th {font-size:12px; padding-right:15px}
+.folders-table td:first-child {font-size:14px; min-width:200px;}
+.folders-table td:nth-child(2) {text-align:right;}
+
+/* Блок превью в upload */
+.previewBlock {position:fixed; right:0; top:0; min-width:250px; text-align:right; font-size:12px; display:none;}
+.previewBlock input {display:block; width:95%; margin-bottom:5px;}
+.previewBlock #previewImg { max-width: 250px; max-height:200px}
+.previewBlock #fileinfo {padding:5px;}
+
+/* Мини-формы действия в upload */
+.fform {margin-top:10px; font-size:12px;}
+.fform input[name=folder] {width:300px;}
+
+.top_line > a {margin-right:10px;}
+
+.table.small {width: auto}
+.table.small>:not(caption)>*>* {padding: .1rem .1rem;}
+
+a.badge:hover {color: white; opacity: 0.5}
+.form-max { max-width: 910px}
+
+.fixed-bottom-block {position: fixed; left: 0; bottom: 0; right: 0; text-align: center; padding: 10px; background: white;
+        border-top: 1px solid #ccc; box-shadow: 0px 4px 12px 0px rgba(50, 50, 50, 0.75);}
+</style>
